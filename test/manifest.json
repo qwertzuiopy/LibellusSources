@@ -1,0 +1,4 @@
+{
+  "name": "Test",
+  "adapter_name": "resource://de/hummdudel/Libellus/database/adapter_test.js"
+}
