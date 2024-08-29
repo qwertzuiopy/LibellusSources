@@ -49,27 +49,17 @@ export const get_any_async = (_url, callback) => {
   callback(null);
 };
 
-// Filter definitions in the following format:
-// name: {
-//  title: "name",
-//  choices: [
-//    {},
-//    {},
-//    ...
-//  ],
-// // 'url' is the url of the current SearchResult,
-// // 'o' is a reference to the current filter, in this case filter_options[name]
-// // should return 'true' if the SearchResult should be displayed, otherwise 'false'
-//  func: (url, o) => {
-//    
-//  },
-// }
+// Filter definitions
 export const filter_options = {
   Thingies: {
     title: "thingy",
     choices: [
       { title: "hi hello hi", content: ["cat", "puppy", "none"], selected: "cat" },
+      { title: "hi hello hi", min: 0, max: 10, value: 5, enabled: false },
     ],
+    // 'url' is the url of the current SearchResult,
+    // 'o' is a reference to the current filter, in this case filter_options[name]
+    // should return 'true' if the SearchResult should be displayed, otherwise 'false'
     func: (url, o) => {
       return url.includes(o.choices[0].selected.toLowerCase());
     },
