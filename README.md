@@ -8,6 +8,12 @@ Clone the test source and import 'de.hummdudel.Libellus.test.gresource' using Li
 To recompile the .gresource file use 'glib-compile-resources de.hummdudel.Libellus.test.gresource.xml'.
 To reload the .gresource file in Libellus remove the source, *restart Libellus* and re-add it. Restarting Libellus is necessary because gjs caches .js files and there is currently no way to unregister GObject subclasses.
 
+## Pathfinder 2nd Edition
+
+Clone the folder 'pf2e. Place the content of the 'packs' folder from [https://github.com/foundryvtt/pf2e](this repo) into the local packs folder. Run 'node parser.js' to generate the JSON data the source will be using.
+Finally run 'glib-compile-resources de.hummdudel.Libellus.pf2e.gresource.xml' to generate the .gresource file.
+TODO: Take a look at licensing and including the data directly.
+
 ## Documentation
 
 Each source consists of a gresource file with the following structure:

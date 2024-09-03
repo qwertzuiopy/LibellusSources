@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/de/hummdudel/Libellus/database">
+    <file>api_pf2e.js</file>
+    <file>adapter_pf2e.js</file>
+    <file>manifest.json</file>
+  </gresource>
+</gresources>
+
