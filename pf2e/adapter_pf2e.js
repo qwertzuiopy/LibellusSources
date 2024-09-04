@@ -21,9 +21,10 @@
 
 
 import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 import { ResultPage, SearchResult } from "resource://de/hummdudel/Libellus/js/results.js";
-import { Card, BigDiv, ModuleStatRow, ModuleStatListRow } from "resource://de/hummdudel/Libellus/js/modules.js";
+import { Card, BigDiv, ImageAsync, ModuleStatListRow } from "resource://de/hummdudel/Libellus/js/modules.js";
 import { API } from "./api_pf2e.js";
 
 
@@ -65,11 +66,14 @@ export const pf2eSearchResultPageSpell = GObject.registerClass({
     super(data, navigation_view);
     let cards = [];
 
+    this.wrapper.append(new ImageAsync(this.data.img.replace("icons", "images")));
+
     // TODO damage, defense, heightening, publication, requirements, rules
+    const is_cost_long = this.data.system.cost.value.length > 10;
     cards.push(new Card("Level", this.data.system.level.value + ""));
     cards.push(new Card("Rarity", this.data.system.traits.rarity));
     if (this.data.system.counteraction !== undefined) cards.push(new Card("Counteraction", b_to_s(this.data.system.counteraction)));
-    if (this.data.system.cost && this.data.system.cost.value != "") cards.push(new Card("Cost", this.data.system.cost.value));
+    if (this.data.system.cost && this.data.system.cost.value != "" && !is_cost_long) cards.push(new Card("Cost", this.data.system.cost.value));
     if (this.data.system.area) cards.push(new Card("Area", this.data.system.area.value + "ft. " + this.data.system.area.type));
     if (this.data.system.range && this.data.system.range.value != "") cards.push(new Card("Range", this.data.system.range.value));
     if (this.data.system.time.value == "reaction") {
@@ -80,12 +84,31 @@ export const pf2eSearchResultPageSpell = GObject.registerClass({
 
     this.wrapper.append(new BigDiv(cards));
 
+    let empty = true;
     this.statrows = new Gtk.ListBox({ css_classes: ["boxed-list"] });
-    if (this.data.system.duration.sustained) this.statrows.append(new ModuleStatListRow("Duration", [this.data.system.duration.value]));
-    if (this.data.system.traits.traditions.length > 0) this.statrows.append(new ModuleStatListRow("Traditions", this.data.system.traits.traditions));
-    if (this.data.system.target && this.data.system.target.value != "") this.statrows.append(new ModuleStatListRow("Target", [this.data.system.target.value]));
-    this.statrows.append(new ModuleStatListRow("Kind", this.data.system.traits.value));
-    this.wrapper.append(this.statrows);
+    if (this.data.system.duration.sustained) {
+      this.statrows.append(new ModuleStatListRow("Duration", [this.data.system.duration.value]));
+      empty = false;
+    }
+    if (is_cost_long) {
+      this.statrows.append(new ModuleStatListRow("Cost", [this.data.system.cost.value]));
+      empty = false;
+    }
+    if (this.data.system.traits.traditions.length > 0) {
+      this.statrows.append(new ModuleStatListRow("Traditions", this.data.system.traits.traditions));
+      empty = false;
+    }
+    if (this.data.system.target && this.data.system.target.value != "") {
+      this.statrows.append(new ModuleStatListRow("Target", [this.data.system.target.value]));
+      empty = false;
+    }
+    if (this.data.system.traits.value.length > 0) {
+      this.statrows.append(new ModuleStatListRow("Kind", this.data.system.traits.value));
+      empty = false;
+    }
+    if (!empty) {
+      this.wrapper.append(this.statrows);
+    }
 
     this.wrapper.append(new pf2eModuleDescription(this.data.system.description.value));
   }
@@ -115,14 +138,18 @@ export const get_sync = (url) => {
 
 }
 
-export const get_any_sync = (_url) => {
-  return null;
+const Soup = imports.gi.Soup;
+const session = Soup.Session.new();
+
+export const get_any_sync = (url) => {
+  let msg = Soup.Message.new('GET', 'https://demo.foundryvtt.com/' + url);
+  return session.send_and_read(msg, Gio.Cancellable.new()).get_data();
 }
 
-export const get_any_async = (_url, callback) => {
-  callback(null);
+export const get_any_async = (url, callback) => {
+  let msg = Soup.Message.new('GET', 'https://demo.foundryvtt.com/' + url);
+  session.send_and_read_async(msg, 1, Gio.Cancellable.new(), (a, b, c) => { callback(session.send_and_read_finish(b).get_data()); });
 }
-
 
 
 export const filter_options = {
