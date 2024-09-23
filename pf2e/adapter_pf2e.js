@@ -24,11 +24,19 @@ import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 import { ResultPage, SearchResult } from "resource://de/hummdudel/Libellus/js/results.js";
-import { Card, BigDiv, ImageAsync, ModuleStatListRow } from "resource://de/hummdudel/Libellus/js/modules.js";
+import { Card, BigDiv, ImageAsync, ModuleStatListRow, ModuleNTable } from "resource://de/hummdudel/Libellus/js/modules.js";
 import { API } from "./api_pf2e.js";
 
 
 export const ident = "pf2e";
+
+export const pf2eModuleSource = GObject.registerClass({
+  GTypeName: 'pf2eModuleSource',
+}, class extends Gtk.Label {
+  constructor(data) {
+    super({ label: data.title });
+  }
+});
 
 export const pf2eModuleDescription = GObject.registerClass({
   GTypeName: 'pf2eModuleDescription',
@@ -44,10 +52,17 @@ export const pf2eModuleDescription = GObject.registerClass({
             label: data[i].text,
             wrap: true,
             margin_top: 15, margin_start: 10, margin_end: 10, margin_bottom: 15,
-            hexpand: true,
+            hexpand: true, halign: Gtk.Align.FILL,
+            xalign: 0.0,
             selectable: true,
             use_markup: true,
           }),
+        }));
+      } else if (data[i].type == "table") {
+        this.append(new Gtk.ListBoxRow({
+          activatable: false, selectable: false,
+          halign: Gtk.Align.FILL,
+          child: new ModuleNTable(data[i].cells),
         }));
       }
     }
@@ -59,6 +74,39 @@ const b_to_s = (bool) => {
 }
 
 
+export const pf2eSearchResultPageAction = GObject.registerClass({
+  GTypeName: 'pf2eSearchResultPageAction',
+}, class extends ResultPage {
+  constructor(data, navigation_view) {
+    super(data, navigation_view);
+
+
+    // frequency
+    this.wrapper.append(new ImageAsync(this.data.img, 64));
+
+    let cards = [];
+    cards.push(new Card("Type", this.data.system.actionType.value));
+    if (this.data.system.category) cards.push(new Card("Category", this.data.system.category));
+    if (this.data.system.traits.rarity) cards.push(new Card("Rarity", this.data.system.traits.rarity));
+    if (this.data.system.actions.value) cards.push(new Card("Actions", this.data.system.actions.value.toString()));
+    this.wrapper.append(new BigDiv(cards));
+
+    let empty = true;
+    this.statrows = new Gtk.ListBox({ css_classes: ["boxed-list"] });
+    if (this.data.system.traits.value.length > 0) {
+      this.statrows.append(new ModuleStatListRow("Kind", this.data.system.traits.value));
+      empty = false;
+    }
+    if (!empty) {
+      this.wrapper.append(this.statrows);
+    }
+
+    this.wrapper.append(new pf2eModuleDescription(this.data.system.description.value));
+
+    this.wrapper.append(new pf2eModuleSource(this.data.system.publication));
+  }
+});
+
 export const pf2eSearchResultPageSpell = GObject.registerClass({
   GTypeName: 'pf2eSearchResultPageSpell',
 }, class extends ResultPage {
@@ -66,9 +114,10 @@ export const pf2eSearchResultPageSpell = GObject.registerClass({
     super(data, navigation_view);
     let cards = [];
 
-    this.wrapper.append(new ImageAsync(this.data.img.replace("icons", "images")));
+    this.wrapper.append(new ImageAsync(this.data.img/* .replace("icons", "images") */));
 
-    // TODO damage, defense, heightening, publication, requirements, rules
+    // TODO damage, defense, heightening, requirements
+    // key "rules" is always an empty array
     const is_cost_long = this.data.system.cost.value.length > 10;
     cards.push(new Card("Level", this.data.system.level.value + ""));
     cards.push(new Card("Rarity", this.data.system.traits.rarity));
@@ -111,18 +160,27 @@ export const pf2eSearchResultPageSpell = GObject.registerClass({
     }
 
     this.wrapper.append(new pf2eModuleDescription(this.data.system.description.value));
+
+    this.wrapper.append(new pf2eModuleSource(this.data.system.publication));
   }
 });
 
 export const get_search_results = (results) => {
   results = results.concat(get_sync("Compendium.pf2e.spells").map((a) => new SearchResult(a)));
+  results = results.concat(get_sync("Compendium.pf2e.actions").map((a) => new SearchResult(a)));
   return results;
 }
 
 export const resolve_link = (data, navigation_view) => {
   var page_data = get_sync(data.url);
   var page = null;
-  page = new pf2eSearchResultPageSpell(page_data, navigation_view);
+  switch (page_data.type) {
+    case "spell": page = new pf2eSearchResultPageSpell(page_data, navigation_view); break;
+    case "action": page = new pf2eSearchResultPageAction(page_data, navigation_view); break;
+    default:
+      log("oops couldn't go to " + data.url);
+      break;
+  }
   return page;
 }
 

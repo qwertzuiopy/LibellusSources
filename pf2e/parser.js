@@ -1,15 +1,40 @@
-let manifest = ["spells"];
+let manifest = ["spells", "actions"];
 let data = {};
 
 const fs = require('fs');
 
+const parse_tag = (tag, string) => {
+  return string.slice(string.indexOf("<" + tag + ">"), string.indexOf("</" + tag + ">")).replace("<" + tag + ">", "");
+}
+const parse_all_tags = (tag, string) => {
+  let tags = [];
+  while (string != "") {
+    let i = string.slice(tag.length + 2, string.indexOf("</" + tag + ">"));
+    tags.push(i);
+    string = string.slice(string.indexOf("</" + tag + ">") + 5, string.length);
+  }
+  return tags;
+}
+
+const parse_table = (string) => {
+  string = string.replaceAll("\n", "");
+  let thead = parse_tag("thead", string);
+  let tbody = parse_tag("tbody", string);
+  let cells = parse_all_tags("tr", thead).map((i) => parse_all_tags("th", i)).concat(parse_all_tags("tr", tbody).map((i) => parse_all_tags("td", i)));
+  return cells;
+}
+
 const parse_html_for_pango = (html) => {
+  let data = [];
   let markup = html.replaceAll("<p>", "")
     .replaceAll("</p>", "")
     .replaceAll("<strong>", " <b>")
     .replaceAll("</strong>", "</b> ")
+    .replaceAll("<h2>", " <b>")
+    .replaceAll("</h2>", "</b> ")
     .replaceAll("<ul>", "")
     .replaceAll("</ul>\n", "")
+    .replaceAll("</ul>", "")
     .replaceAll("<li>", "‣")
     .replaceAll("</li>", "")
     .replaceAll("<em>", "<i>")
@@ -17,16 +42,48 @@ const parse_html_for_pango = (html) => {
     .replaceAll('<span class="action-glyph">', '<span background="purple">')
     .replaceAll("\n<hr />\n", "")
     .replaceAll("<hr />", "\n");
-  let data = markup.split("\n");
-  for (let i in data) {
-    data[i] = {
-      type: "text",
-      text: data[i],
-    };
+  // while (markup.includes("@UUID")) {
+  //   markup = markup.slice(0, markup.indexOf("@UUID")) + markup.slice(markup.indexOf(": ", markup.indexOf("@UUID")), markup.indexOf("]")) + markup.slice(markup.indexOf("]") + 1, markup.length);
+  // }
+  if (markup.includes("<table")) {
+    let before = markup.slice(0, markup.indexOf("<table")).split("\n");
+    let table = markup.slice(markup.indexOf("<table"), markup.indexOf("</table>"));
+    let after = markup.slice(markup.indexOf("</table>") + 9, markup.length).split("\n");
+    table = table.replace('<table class="pf2e">', "");
+    let cells = parse_table(table);
+    for (let i in before) {
+      data.push({
+        type: "text",
+        text: before[i],
+      });
+    }
+    data.push({
+      type: "table",
+      cells: cells,
+    });
+    for (let i in after) {
+      data.push({
+        type: "text",
+        text: after[i],
+      });
+    }
+  } else {
+    data = markup.split("\n");
+    for (let i in data) {
+      data[i] = {
+        type: "text",
+        text: data[i],
+      };
+    }
   }
-  return data;
+
+  return data.filter((i) => {
+    return i.text != "";
+  })
 }
 
+
+let done = false;
 for (let i in manifest) {
   data[manifest[i]] = {};
   fs.readdir("./packs/" + manifest[i], (err, files) => {
@@ -42,17 +99,14 @@ for (let i in manifest) {
       console.log(content._id + ":" + path);
       data[manifest[i]][content.name.replace(" ", "-").toLowerCase()] = content;
     });
-
-    fs.writeFile('./api_pf2e.js', "export const API = " + JSON.stringify(data), err => {
-      if (err) {
-        console.error(err);
-      } else {
-        console.log("done");
-      }
-    });
+    if (i == manifest.length - 1) {
+      fs.writeFile('./api_pf2e.js', "export const API = " + JSON.stringify(data), err => {
+        if (err) {
+          console.error(err);
+        } else {
+          console.log("done");
+        }
+      });
+    }
   });
 }
-
-
-
-
