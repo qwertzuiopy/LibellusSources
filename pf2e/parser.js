@@ -1,5 +1,32 @@
-let manifest = ["spells", "actions"];
-let data = {};
+let manifest = ["spells", "actions", "deities"];
+// action-macros
+// ancestries
+// ancestryfeatures
+// backgrounds
+// boons-and-curses
+// campaign-effects
+// classes
+// classfeatures
+// conditions
+// criticaldeck
+// deities
+// equipment
+// equipment-effects
+// fall-of-plaguestone
+// familiar-abilities
+// feat-effects
+// feats
+// gmg-srd
+// hazards
+// heritages
+// iconics
+// journals
+// macros
+// npc-gallery
+// other-effects
+// rollable-tables
+// spell-effects
+// vehicles
 
 const fs = require('fs');
 
@@ -85,8 +112,10 @@ const parse_html_for_pango = (html) => {
 
 let done = false;
 for (let i in manifest) {
-  data[manifest[i]] = {};
+  console.log("starting manifest "+manifest[i]);
   fs.readdir("./packs/" + manifest[i], (err, files) => {
+    console.log("read dir for "+manifest[i]);
+    let data = {};
     if (err) {
       console.log(err);
       return;
@@ -96,17 +125,16 @@ for (let i in manifest) {
       let content = require(path);
       content.system.description.value = parse_html_for_pango(content.system.description.value);
       content.url = "Compendium.pf2e." + manifest[i] + ".Item." + content.name;
-      console.log(content._id + ":" + path);
-      data[manifest[i]][content.name.replace(" ", "-").toLowerCase()] = content;
+      // console.log(content._id + ":" + path);
+      data[content.name.replace(" ", "-").toLowerCase()] = content;
     });
-    if (i == manifest.length - 1) {
-      fs.writeFile('./api_pf2e.js', "export const API = " + JSON.stringify(data), err => {
-        if (err) {
-          console.error(err);
-        } else {
-          console.log("done");
-        }
-      });
-    }
+    fs.writeFile('./api_'+manifest[i]+'.json', JSON.stringify(data), (err) => {
+      if (err) {
+        console.error(err);
+      } else {
+        console.log("done for "+manifest[i]);
+        console.log(Object.keys(data).length);
+      }
+    });
   });
 }

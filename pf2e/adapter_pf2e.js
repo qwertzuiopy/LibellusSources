@@ -1,7 +1,7 @@
 
 /* pf2e.js
  *
- * Copyright 2024 Michael Hammer
+ * Copyright 2024 Luna
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,8 +24,8 @@ import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 import { ResultPage, SearchResult } from "resource://de/hummdudel/Libellus/js/results.js";
-import { Card, BigDiv, ImageAsync, ModuleStatListRow, ModuleNTable } from "resource://de/hummdudel/Libellus/js/modules.js";
-import { API } from "./api_pf2e.js";
+import { Card, BigDiv, ImageAsync, ModuleStatListRow, ModuleNTable, ModuleLinkList } from "resource://de/hummdudel/Libellus/js/modules.js";
+// import { API } from "./api_pf2e.js";
 
 
 export const ident = "pf2e";
@@ -81,7 +81,6 @@ export const pf2eSearchResultPageAction = GObject.registerClass({
     super(data, navigation_view);
 
 
-    // frequency
     this.wrapper.append(new ImageAsync(this.data.img, 64));
 
     let cards = [];
@@ -89,6 +88,9 @@ export const pf2eSearchResultPageAction = GObject.registerClass({
     if (this.data.system.category) cards.push(new Card("Category", this.data.system.category));
     if (this.data.system.traits.rarity) cards.push(new Card("Rarity", this.data.system.traits.rarity));
     if (this.data.system.actions.value) cards.push(new Card("Actions", this.data.system.actions.value.toString()));
+    if (this.data.system.frequency) {
+      cards.push(new Card("Frequency", this.data.system.frequency.max + " per " + this.data.system.frequency.per));
+    }
     this.wrapper.append(new BigDiv(cards));
 
     let empty = true;
@@ -165,9 +167,65 @@ export const pf2eSearchResultPageSpell = GObject.registerClass({
   }
 });
 
+export const pf2eSearchResultPageDeity = GObject.registerClass({
+  GTypeName: 'pf2eSearchResultPageDeity',
+}, class extends ResultPage {
+  constructor(data, navigation_view) {
+    super(data, navigation_view);
+
+    this.wrapper.append(new ImageAsync(this.data.img/* .replace("icons", "images") */));
+
+    // let cards = [];
+    // cards.push(new Card("Time", this.data.system.time.value + " actions"));
+    // this.wrapper.append(new BigDiv(cards));
+
+    this.statrows = new Gtk.ListBox({ css_classes: ["boxed-list"] });
+    this.statrows.append(new ModuleStatListRow("Attributes", this.data.system.attribute));
+    this.statrows.append(new ModuleStatListRow("Domains", this.data.system.domains.primary));
+    if (this.data.system.domains.alternate.length > 0) {
+      this.statrows.append(new ModuleStatListRow("Alternate Domains", this.data.system.domains.alternate));
+    }
+    this.statrows.append(new ModuleStatListRow("Divine Font", this.data.system.font));
+    // TODO
+    this.statrows.append(new ModuleStatListRow("Sanctification: " + this.data.system.sanctification.modal, this.data.system.sanctification.what));
+    this.statrows.append(new ModuleStatListRow("Divine Skills", this.data.system.skill));
+    this.statrows.append(new ModuleStatListRow("Weapons", this.data.system.weapons));
+    this.wrapper.append(new ModuleLinkList(Object.keys(this.data.system.spells).map((i) => this.data.system.spells[i]).map((i) => {
+      i = i.replace("-srd", "");
+      let data = get_sync(i, true);
+      log(data);
+      return {
+        item: {
+          url: i,
+          name: data.name,
+        }
+      };
+    })));
+
+    this.wrapper.append(this.statrows);
+
+    this.wrapper.append(new pf2eModuleDescription(this.data.system.description.value));
+
+    this.wrapper.append(new pf2eModuleSource(this.data.system.publication));
+  }
+});
+
+let API = {};
+export const init = (resource) => {
+  log("meooow :3");
+  let parts = ["spells", "actions", "deities"];
+  for (let i in parts) {
+    let bytes = resource.lookup_data("/de/hummdudel/Libellus/database/api_" + parts[i] + ".json", 0);
+    let array = bytes.toArray();
+    let string = new TextDecoder().decode(array);
+    API[parts[i]] = JSON.parse(string);
+  }
+}
+
 export const get_search_results = (results) => {
   results = results.concat(get_sync("Compendium.pf2e.spells").map((a) => new SearchResult(a)));
   results = results.concat(get_sync("Compendium.pf2e.actions").map((a) => new SearchResult(a)));
+  results = results.concat(get_sync("Compendium.pf2e.deities").map((a) => new SearchResult(a)));
   return results;
 }
 
@@ -177,6 +235,7 @@ export const resolve_link = (data, navigation_view) => {
   switch (page_data.type) {
     case "spell": page = new pf2eSearchResultPageSpell(page_data, navigation_view); break;
     case "action": page = new pf2eSearchResultPageAction(page_data, navigation_view); break;
+    case "deity": page = new pf2eSearchResultPageDeity(page_data, navigation_view); break;
     default:
       log("oops couldn't go to " + data.url);
       break;
@@ -184,12 +243,23 @@ export const resolve_link = (data, navigation_view) => {
   return page;
 }
 
-export const get_sync = (url) => {
+export const get_sync = (url, by_id = false) => {
   let parts = url.split(".");
   let category = parts[2];
   if (parts.length == 5) {
-    let item = parts[4].replace(" ", "-").toLowerCase();
-    return API[category][item];
+    if (by_id) {
+      log("searching for " + parts[4] +" among "+category);
+      let keys = Object.keys(API[category]);
+      for (let i = 0; i < keys.length; i++) {
+        if (API[category][keys[i]]._id == parts[4]) {
+          return API[category][keys[i]];
+        }
+      }
+      log("found nothinn");
+    } else {
+      let item = parts[4].replace(" ", "-").toLowerCase();
+      return API[category][item];
+    }
   } else if (parts.length == 3) {
     return Object.values(API[category]);
   }
