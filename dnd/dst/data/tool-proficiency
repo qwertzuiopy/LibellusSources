@@ -1,0 +1,1 @@
+{id:"tool-proficiency",name:"Tool Proficiency",content:[{id:"Title",content:"Tool Proficiency"},{id:"MultiText",content:["You gain proficiency with the artisan's tools of your choice: smith's tools, brewer's supplies, or mason's tools."]},{id:"StatList",content:[{title:"Choose 1:",content:["@smiths-tools","@brewers-supplies","@masons-tools"]}]}]}

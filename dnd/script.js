@@ -53,6 +53,10 @@ const score_to_modifier = (score) => {
 
   const fs = require('node:fs/promises');
 
+  let proficiencies = await fs.readFile('./src/5e-SRD-Proficiencies.json', { encoding: 'utf8' });
+  proficiencies = JSON.parse(proficiencies);
+  let proficiency_lookup = proficiencies.map((i) => {return {index: i.index, next: i.reference.index}; });
+
   let spells = await fs.readFile('./src/5e-SRD-Spells.json', { encoding: 'utf8' });
   spells = JSON.parse(spells);
   for (let i = 0; i < spells.length; i++) {
@@ -140,6 +144,7 @@ const score_to_modifier = (score) => {
     let page = {
       id: item.index,
       name: item.name,
+      category: "monster",
       content: [],
     };
     page.content.push({id: "Title", content: item.name});
@@ -215,6 +220,234 @@ const score_to_modifier = (score) => {
 
     await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
   }
+
+  let traits = await fs.readFile('./src/5e-SRD-Traits.json', { encoding: 'utf8' });
+  traits = JSON.parse(traits);
+  for (let i = 0; i < traits.length; i++) {
+    let item = traits[i];
+    let index = {
+      id: item.index,
+      name: item.name,
+      category: "trait",
+    }
+    dir.push(index);
+    let page = {
+      id: item.index,
+      name: item.name,
+      content: [],
+    };
+    page.content.push({id: "Title", content: item.name});
+    page.content.push({id: "MultiText", content: item.desc});
+    let statrows = [];
+    if (item.proficiency_choices) {
+      let s = "Choose " + item.proficiency_choices.choose + ":";
+      let arr = item.proficiency_choices.from.options.map((i) => {
+        return "@"+proficiency_lookup.find((j) => j.index == i.item.index).next;
+      });
+      statrows.push({title: s, content: arr});
+    }
+    if (item.proficiencies && item.proficiencies.length > 0) {
+      statrows.push({title: "Proficiencies", content: item.proficiencies.filter((i) => {
+        return !i.url.includes("saving-throw")
+      }).map((i) => {
+        return "@"+proficiency_lookup.find((j) => j.index == i.index).next;
+      })});
+    }
+    if (item.trait_specific) {
+      if (item.trait_specific) {
+        statrows.push({title: "TODO trait specific", content: []});
+      } else if (item.trait_specific.subtrait_options) {
+        statrows.push({
+          title: "choose " + item.trait_specific.subtrait_options.choose,
+          content: item.trait_specific.subtrait_options.from.options.map((i) => {
+            return "@"+i.item.index;
+          })});
+      } else if (item.trait_specific.spell_options) {
+        statrows.push({
+          title: "choose " + item.trait_specific.spell_options.choose,
+          content: item.trait_specific.spell_options.from.options.map((i) => {
+            return "@"+i.item.index;
+          }),
+        });
+      } else {
+        if (item.trait_scpecific.desc == undefined) {
+          console.log(item);
+          return;
+        }
+        page.content.push({id: "MultiText", content: [item.trait_scpecific.desc]});
+      }
+    }
+    if (statrows.length > 0) {
+      page.content.push({id: "StatList", content: statrows});
+    }
+    await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
+  }
+
+  let equipment = await fs.readFile('./src/5e-SRD-Equipment.json', { encoding: 'utf8' });
+  equipment = JSON.parse(equipment );
+
+  let magic_items = await fs.readFile('./src/5e-SRD-Magic-Items.json', { encoding: 'utf8' });
+  magic_items = JSON.parse(magic_items);
+  equipment = equipment.concat(magic_items);
+  for (let i = 0; i < equipment.length; i++) {
+    let item = equipment[i];
+    let index = {
+      id: item.index,
+      name: item.name,
+      category: "equipment",
+      equipment_category: [],
+    }
+    if (item.properties) {
+      index.properties = item.properties.map((i) => i.index);
+    }
+    if (item.equipment_category) index.equipment_category.push(item.equipment_category.index);
+    if (item.gear_category) index.equipment_category.push(item.gear_category.index);
+    if (item.vehicle_category) index.equipment_category.push(item.vehicle_category.replaceAll(",", "").replaceAll(" ", "-").replaceAll("'", "").toLowerCase());
+    if (item.tool_category) index.equipment_category.push(item.tool_category.replaceAll(",", "").replaceAll(" ", "-").replaceAll("'", "").toLowerCase());
+    if (item.armor_category) index.equipment_category.push(item.armor_category.replaceAll(",", "").replaceAll(" ", "-").replaceAll("'", "").toLowerCase());
+    if (item.weapon_category) {
+      index.equipment_category.push("weapon");
+      if (item.weapon_category)index.equipment_category.push(item.weapon_category.replaceAll(",", "").replaceAll(" ", "-").replaceAll("'", "").toLowerCase()); 
+      if (item.weapon_range)index.equipment_category.push(item.weapon_range.replaceAll(",", "").replaceAll(" ", "-").replaceAll("'", "").toLowerCase()); 
+      if (item.category_range)index.equipment_category.push(item.category_range.replaceAll(",", "").replaceAll(" ", "-").replaceAll("'", "").toLowerCase()); 
+    }
+
+    dir.push(index);
+    let page = {
+      id: item.index,
+      name: item.name,
+      content: [],
+    };
+    page.content.push({id: "Title", content: item.name});
+
+    if (item.image) {
+      page.content.push({id: "Image", url: "https://www.dnd5eapi.co"+item.image});
+    }
+
+    let statgrid = [];
+    if (item.equipment_category) {
+      statgrid.push({title: "Category", content: item.equipment_category.name});
+    }
+    if (item.cost) {
+      if (!item.quantity) {
+        statgrid.push({title: "Cost", content: item.cost.quantity.toString() + item.cost.unit});
+      } else {
+      statgrid.push({title: "Cost", content: item.cost.quantity.toString()
+        + item.cost.unit
+        + " per "
+        + item.quantity.toString()});
+      }
+    }
+    if (item.rarity) {
+      statgrid.push({title: "Rarity", content: item.rarity.name});
+    }
+    if (item.weight) {
+      if (!item.quantity) {
+        statgrid.push({title: "Weight", content: item.weight.toString() + "lb"});
+      } else {
+        statgrid.push({title: "Weight", content: item.weight.toString()
+          + "lb per "
+          + item.quantity.toString()});
+      }
+    }
+
+    if (item.gear_category) statgrid.push({ title: "Type", content: item.gear_category.name});
+    else if (item.vehicle_category) statgrid.push({title: "Type", content: item.vehicle_category});
+    else if (item.tool_category) statgrid.push({title: "Type", content: item.tool_category});
+    else if (item.weapon_category) statgrid.push({title: "Type", content: item.weapon_category});
+    else if (item.armor_category) statgrid.push({title: "Type", content: item.armor_category});
+    if (item.weapon_range) {
+      statgrid.push({title: "Range", content: item.weapon_range});
+    }
+    if (item.armor_class) {
+      statgrid.push({title: "Armor Class", content: item.armor_class.base.toString()
+      + (item.armor_class.dex_bonus ? " + Dex"
+        + (item.armor_class.max_bonus ? " (max "
+          + item.armor_class.max_bonus.toString()
+          + ")" : "") : "")})
+    }
+    if (item.str_minimum !== undefined && item.str_minimum != 0) {
+      statgrid.push({title: "Strength", content: "min "+item.str_minimum.toString()});
+    }
+    if (statgrid.length > 0) {
+      page.content.push({id: "StatGrid", content: statgrid});
+    }
+
+    let statlist = [];
+    if (item.range) {
+      if (item.range.long) {
+        statlist.push({title: "Range", content: [item.range.normal.toString() +"ft normal", item.range.long.toString()+"ft long"]});
+      } else {
+        statlist.push({title: "Range", content: [item.range.normal.toString() +"ft"]});
+      }
+    }
+    if (item.damage) {
+      statlist.push({title: "Damage", content: [item.damage.damage_dice+" "+item.damage.damage_type.name]});
+    }
+    if (item.properties) {
+      statlist.push({title: "Properties", content: item.properties.map((i) => i.name)});
+    }
+    if (item.stealth_disadvantage !== undefined && item.stealth_disadvantage != 0) {
+      statlist.push({title: "Stealth", content: "disadvantage"});
+    }
+    if (statlist.length > 0) {
+      page.content.push({id: "StatList", content: statlist});
+    }
+
+    if (item.desc && item.desc.length > 0) {
+      page.content.push({id: "MultiText", content: item.desc});
+    }
+
+    if (item.contents && item.contents.length > 0) {
+      page.content.push({id: "Subtitle", content: "Contents"});
+      page.content.push({
+        id: "LinkList",
+        content: item.contents.map((i) =>
+        { return {
+          id: "@"+i.item.index,
+          content: i.quantity == 1 ? "once" : (i.quantity.toString()+" times"),
+        } })});
+    }
+
+    if (item.variants && item.variants.length > 0) {
+      page.content.push({id: "Subtitle", content: "Variants"});
+      page.content.push({
+        id: "LinkList",
+        content: item.variants.map((i) =>
+        { return {
+          id: "@"+i.index,
+          content: "",
+        } })});
+    }
+
+    await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
+  }
+
+  let skills = await fs.readFile('./src/5e-SRD-Skills.json', { encoding: 'utf8' });
+  skills = JSON.parse(skills);
+  for (let i = 0; i < traits.length; i++) {
+    let item = traits[i];
+    let index = {
+      id: item.index,
+      name: item.name,
+      category: "skill",
+    }
+    dir.push(index);
+    let page = {
+      id: item.index,
+      name: item.name,
+      content: [],
+    };
+    page.content.push({id: "Title", content: item.name});
+    let statgrid = [];
+    statgrid.push({title: "Ability", content: "@"+item.ability_score.index});
+    page.content.push({id: "StatGrid", content: statgrid});
+    page.content.push({id: "MultiText", content: item.desc});
+
+    await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
+  }
+
+  console.log(dir.length);
 
   await fs.writeFile("./dst/dir", obj_to_str(dir));
 
