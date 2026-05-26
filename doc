@@ -1,0 +1,16 @@
+{
+  id: "blah",
+  name: "blub",
+  category: "something",
+  content: [
+    { id: "Title", content: "..."},
+    { id: "Subtitle", content: "..."},
+    { id: "StatGrid", content: [{title: "title", content: "..."}]},
+    { id: "LinkList", content: ["@id1", "@id2"]},
+    { id: "MultiText", content: ["text1", "text2"]},
+    { id: "Table", content: [["one", "two"], ["three", "four"]]},
+    { id: "StatList", content: [{title: "title", content: "..."}]},
+    { id: "TitledText", content: [{ title:"title", content: "..." }]},
+    { id: "Image", url: "..."}
+  ]
+}

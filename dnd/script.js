@@ -425,8 +425,8 @@ const score_to_modifier = (score) => {
 
   let skills = await fs.readFile('./src/5e-SRD-Skills.json', { encoding: 'utf8' });
   skills = JSON.parse(skills);
-  for (let i = 0; i < traits.length; i++) {
-    let item = traits[i];
+  for (let i = 0; i < skills.length; i++) {
+    let item = skills[i];
     let index = {
       id: item.index,
       name: item.name,
@@ -440,9 +440,159 @@ const score_to_modifier = (score) => {
     };
     page.content.push({id: "Title", content: item.name});
     let statgrid = [];
-    statgrid.push({title: "Ability", content: "@"+item.ability_score.index});
-    page.content.push({id: "StatGrid", content: statgrid});
+    if (item.ability_score != undefined) {
+      statgrid.push({title: "Ability", content: "@"+item.ability_score.index});
+    }
+    if (statgrid.length > 0) {
+      page.content.push({id: "StatGrid", content: statgrid});
+    }
     page.content.push({id: "MultiText", content: item.desc});
+
+    await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
+  }
+
+  let abilities = await fs.readFile('./src/5e-SRD-Ability-Scores.json', { encoding: 'utf8' });
+  abilities = JSON.parse(abilities);
+  for (let i = 0; i < abilities.length; i++) {
+    let item = abilities[i];
+    let index = {
+      id: item.index,
+      name: item.full_name,
+      category: "ability",
+    }
+    dir.push(index);
+    let page = {
+      id: item.index,
+      name: item.full_name,
+      content: [],
+    };
+    page.content.push({id: "Title", content: item.full_name});
+    page.content.push({id: "MultiText", content: item.desc});
+    page.content.push({id: "LinkList", content: item.skills.map((i) => {
+      return {id: "@"+i.index, content: ""};
+    })});
+
+    await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
+  }
+  let features = await fs.readFile('./src/5e-SRD-Features.json', { encoding: 'utf8' });
+  features = JSON.parse(features);
+  for (let i = 0; i < features.length; i++) {
+    let item = features[i];
+    let index = {
+      id: item.index,
+      name: item.name,
+      category: "fearure",
+    }
+    dir.push(index);
+    let page = {
+      id: item.index,
+      name: item.name,
+      content: [],
+    };
+    page.content.push({id: "Title", content: item.name});
+
+    let statgrid = [];
+    statgrid.push({title: "Level", content: ""+item.level});
+    if (statgrid.length > 0) {
+      page.content.push({id: "StatGrid", content: statgrid});
+    }
+    page.content.push({id: "MultiText", content: item.desc});
+    let arr = [{id: "@"+item.class.index, content: ""}];
+    if (item.subclass) {
+      arr.push({id: "@"+item.subclass.index, content: ""});
+    }
+    page.content.push({id: "LinkList", content: arr});
+
+    await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
+  }
+  let classes = await fs.readFile('./src/5e-SRD-Classes.json', { encoding: 'utf8' });
+  classes = JSON.parse(classes);
+  for (let i = 0; i < classes.length; i++) {
+    let item = classes[i];
+    let index = {
+      id: item.index,
+      name: item.name,
+      category: "class",
+    }
+    dir.push(index);
+    let page = {
+      id: item.index,
+      name: item.name,
+      content: [],
+    };
+    page.content.push({id: "Title", content: item.name});
+
+    let statgrid = [];
+    statgrid.push({title: "Hit die", content: "d"+item.hit_die+" ("+Math.ceil(item.hit_die/2+0.5)+")"});
+    statgrid.push({title: "HP at Level 1", content: "Constitution + "+item.hit_die});
+    if (item.spellcasting) {
+      statgrid.push({title: "Spellcasting", content: "@"+item.spellcasting.spellcasting_ability.index});
+    } else {
+      statgrid.push({title: "Spellcasting", content: "None"});
+    }
+    page.content.push({id: "StatGrid", content: statgrid});
+
+    let statrows = [];
+    for (let i in item.proficiency_choices) {
+      let choice = item.proficiency_choices[i];
+      if (!choice.from.options[0].item) {
+        statrows.push({title: choice.desc, content: []});
+      } else {
+        let s = "Choose " + choice.choose + ":";
+        let arr = choice.from.options.map((i) => {
+          return "@"+proficiency_lookup.find((j) => j.index == i.item.index).next;
+        });
+        statrows.push({title: s, content: arr});
+      }
+    }
+    statrows.push({title: "Proficiencies", content: item.proficiencies.filter((i) => {
+      return !i.url.includes("saving-throw")
+    }).map((i) => {
+      return "@"+proficiency_lookup.find((j) => j.index == i.index).next;
+    })});
+    statrows.push({title: "Saving Throws", content: item.saving_throws.map((i)=>i.index)});
+    page.content.push({id: "StatList", content: statrows});
+
+    if (item.spellcasting) {
+      page.content.push({id: "Subtitle", content: "Spellcasting"});
+      let arr = item.spellcasting.info.map((i) => {
+        return "***" + i.name + ".***" + i.desc.join("###");
+      });
+      page.content.push({id: "MultiText", content: arr});
+    }
+
+    page.content.push({id: "Subtitle", content: "Starting Equipment"});
+    if (item.starting_equipment.length > 0) {
+      page.content.push({id: "LinkList", content: item.starting_equipment.map((i) => {
+        return {
+          title: "@"+i.equipment.index,
+          content: i.quantity > 1 ? i.quantity.toString() + "times" : "once"
+        };
+      })})
+    }
+    page.content.push({
+      id: "MultiText",
+      content: item.starting_equipment_options.map((i) => i.desc)
+    });
+
+    page.content.push({id: "Subtitle", content: "Subclasses"});
+    page.content.push({id: "LinkList", content: 
+      item.subclasses.map((i) => {
+        return {
+          title: "@"+i.index,
+          content: "",
+        };
+      })
+    });
+
+    let level_data = get_sync()
+
+    // page.content.push({id: "MultiText", content: item.desc});
+    // let arr = [{id: "@"+item.class.index, content: ""}];
+    // if (item.subclass) {
+      // arr.push({id: "@"+item.subclass.index, content: ""});
+    // }
+    // page.content.push({id: "LinkList", content: arr});
 
     await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
   }
