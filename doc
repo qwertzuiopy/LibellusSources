@@ -6,11 +6,15 @@
     { id: "Title", content: "..."},
     { id: "Subtitle", content: "..."},
     { id: "StatGrid", content: [{title: "title", content: "..."}]},
-    { id: "LinkList", content: ["@id1", "@id2"]},
+    { id: "LinkList", content: [{id: "@id1", content: "once"}, {id: "@id2", content: "twice"}]},
     { id: "MultiText", content: ["text1", "text2"]},
     { id: "Table", content: [["one", "two"], ["three", "four"]]},
     { id: "StatList", content: [{title: "title", content: "..."}]},
     { id: "TitledText", content: [{ title:"title", content: "..." }]},
     { id: "Image", url: "..."}
+    { id: "Cycler", title: "Stats on Level", max: 20, content: [
+      [{ id: "Title", content: "level 1"}],
+      [{ id: "Subtitle", content: "level2"}]
+    ]}
   ]
 }

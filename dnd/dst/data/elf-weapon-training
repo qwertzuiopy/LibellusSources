@@ -1,1 +1,0 @@
-{id:"elf-weapon-training",name:"Elf Weapon Training",content:[{id:"Title",content:"Elf Weapon Training"},{id:"MultiText",content:["You have proficiency with the longsword, shortsword, shortbow, and longbow."]},{id:"StatList",content:[{title:"Proficiencies",content:["@longsword","@shortsword","@shortbow","@longbow"]}]}]}
