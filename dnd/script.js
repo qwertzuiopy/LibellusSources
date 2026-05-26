@@ -53,6 +53,21 @@ const score_to_modifier = (score) => {
 
   const fs = require('node:fs/promises');
 
+  let folders = await fs.readdir('./src');
+  let api = [];
+  for (let i = 0; i < folders.length; i++) {
+    api = api.concat(JSON.parse(await fs.readFile("./src/"+folders[i])));
+
+  }
+  function get_sync(index) {
+    index = index.split("/")[index.split("/").length-1];
+    for (let i = 0; i < api.length; i++) {
+      if (api[i].index == index) {
+        return api[i];
+      }
+    }
+  }
+
   let proficiencies = await fs.readFile('./src/5e-SRD-Proficiencies.json', { encoding: 'utf8' });
   proficiencies = JSON.parse(proficiencies);
   let proficiency_lookup = proficiencies.map((i) => {return {index: i.index, next: i.reference.index}; });
@@ -62,7 +77,7 @@ const score_to_modifier = (score) => {
   for (let i = 0; i < spells.length; i++) {
     let item = spells[i];
     let index = {
-      id: item.index,
+      id: "spell-"+item.index,
       name: item.name,
       school: item.school.index,
       level: item.level,
@@ -71,7 +86,7 @@ const score_to_modifier = (score) => {
     };
     dir.push(index);
     let page = {
-      id: item.index,
+      id: "spell-"+item.index,
       name: item.name,
       content: [],
     };
@@ -129,7 +144,7 @@ const score_to_modifier = (score) => {
         ]
       });
     }
-    await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
+    await fs.writeFile("./dst/data/spell-"+item.index, obj_to_str(page));
   }
 
   let monsters = await fs.readFile('./src/5e-SRD-Monsters.json', { encoding: 'utf8' });
@@ -137,12 +152,12 @@ const score_to_modifier = (score) => {
   for (let i = 0; i < monsters.length; i++) {
     let item = monsters[i];
     let index = {
-      id: item.index,
+      id: "monster-"+item.index,
       name: item.name,
     }
     dir.push(index);
     let page = {
-      id: item.index,
+      id: "monster-"+item.index,
       name: item.name,
       category: "monster",
       content: [],
@@ -218,7 +233,7 @@ const score_to_modifier = (score) => {
       page.content.push({id: "TitledText", content: item.legendary_actions.map((i) => { return {title: i.name, content: i.desc}})});
     }
 
-    await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
+    await fs.writeFile("./dst/data/monster-"+item.index, obj_to_str(page));
   }
 
   let traits = await fs.readFile('./src/5e-SRD-Traits.json', { encoding: 'utf8' });
@@ -292,7 +307,7 @@ const score_to_modifier = (score) => {
   for (let i = 0; i < equipment.length; i++) {
     let item = equipment[i];
     let index = {
-      id: item.index,
+      id: "item-"+item.index,
       name: item.name,
       category: "equipment",
       equipment_category: [],
@@ -314,7 +329,7 @@ const score_to_modifier = (score) => {
 
     dir.push(index);
     let page = {
-      id: item.index,
+      id: "item-"+item.index,
       name: item.name,
       content: [],
     };
@@ -420,7 +435,7 @@ const score_to_modifier = (score) => {
         } })});
     }
 
-    await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
+    await fs.writeFile("./dst/data/item-"+item.index, obj_to_str(page));
   }
 
   let skills = await fs.readFile('./src/5e-SRD-Skills.json', { encoding: 'utf8' });
@@ -596,6 +611,98 @@ const score_to_modifier = (score) => {
 
     await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
   }
+
+  let classes = await fs.readFile('./src/5e-SRD-Classes.json', { encoding: 'utf8' });
+  classes = JSON.parse(classes);
+  for (let i = 0; i < classes.length; i++) {
+    let item = classes[i];
+    let index = {
+      id: item.index,
+      name: item.name,
+      category: "class",
+    }
+    dir.push(index);
+    let page = {
+      id: item.index,
+      name: item.name,
+      content: [],
+    };
+    page.content.push({id: "Title", content: item.name});
+    let statgrid = [];
+    statgrid.push({title: "Hit die", content: "d"+item.hit_die.toString()+ " (" + Math.ceil(item.hit_die / 2 + 0.5) + ")"});
+    statgrid.push({title: "HP at Level 1", content: "Constitution + "+item.hit_die.toString()})
+    if (item.spellcasting) {
+      statgrid.push({title: "Spellcasting", content: "@"+item.spellcasting.spellcasting_ability.index});
+    } else {
+      statgrid.push({title: "Spellcasting", content: "None"});
+    }
+    page.content.push({id: "StatGrid", content: statgrid});
+    let statrows = [];
+    for (let i in item.proficiency_choices) {
+      let choice = item.proficiency_choices[i];
+      if (!choice.from.options[0].item) {
+        page.content.push({id: "MultiText", content: choice.desc});
+      } else {
+        let s = "";
+        let arr = choice.from.options;
+        arr = arr.map((i) => { return "@item-"+proficiency_lookup.find((j) => j.index == i.item.index).next; });
+        if (choice.from.options[0].item.name.includes("Skill")) {
+          s = "Skills: Choose " + choice.choose.toString();
+        } else {
+          s = choice.desc;
+        }
+        statrows.push({title: s, content: arr});
+      }
+    }
+    statrows.push({title: "Proficiencies", content: item.proficiencies.filter((i) => {
+      return !i.url.includes("saving-throw")
+    }).map((i) => {
+      return "TODO"; // get_url_for_proficiency(i);
+    }) });
+    statrows.push({title: "Saving Throws", content: item.saving_throws.map((i) => "@"+i.index) });
+    page.content.push({id: "StatList", content: statrows});
+
+    if (item.spellcasting) {
+      page.content.push({id: "Subtitle", content: "Spellcasting"});
+      let arr = item.spellcasting.info.map((i) => {
+        return "***" + i.name + ".*** " + i.desc.join("\n");
+      });
+      page.content.push({id: "MultiText", content: arr});
+    }
+
+    page.content.push({id: "Subtitle", content: "Starting Equipment"});
+    if (item.starting_equipment.length > 0) {
+      page.content.push({id: "LinkList", content: item.starting_equipment.map((i) => {
+        return {
+          id: "@item-"+i.equipment.index,
+          content: i.quantity > 1 ? (i.quantity.toString() + " times") : "",
+        };
+      })
+      } );
+    }
+    page.content.push({
+      id: "MultiText",
+      content: item.starting_equipment_options.map((i) => i.desc)
+    });
+
+    page.content.push({id: "Subtitle", content: "Subclasses"});
+    page.content.push({id: "LinkList", content:item.subclasses.map((i) => {
+      return {id: "@item-"+i.index, content: ""};
+    })});
+
+    let level_data = [];
+    for (let i = 1; i <= 20; i++) {
+      level_data.push({title: i+".", content: get_sync(item.index +"-"+i).features.map((i) => "@"+i.index)});
+    }
+    page.content.push({
+      id: "StatList", content:
+        level_data
+    });
+
+
+    await fs.writeFile("./dst/data/"+item.index, obj_to_str(page));
+  }
+
 
   console.log(dir.length);
 
