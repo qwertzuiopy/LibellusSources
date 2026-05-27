@@ -161,6 +161,8 @@ const score_to_modifier = (score) => {
     let index = {
       id: utoi(item.url),
       name: item.name,
+      category: "monster",
+      cr: item.challenge_rating,
     }
     dir.push(index);
     let page = {
@@ -577,7 +579,6 @@ const score_to_modifier = (score) => {
 
     if (item.spellcasting) {
       page.content.push({id: "Subtitle", content: "Spellcasting"});
-      console.log(item.spellcasting.info);
       let arr = item.spellcasting.info.map((i) => {
         return "***" + i.name + ".***" + i.desc.join("\n");
       });
@@ -721,6 +722,146 @@ const score_to_modifier = (score) => {
         }
       })});
     }
+
+    await fs.writeFile("./dst/data/"+utoi(item.url), obj_to_str(page));
+  }
+
+  let races = await fs.readFile('./src/5e-SRD-Races.json', { encoding: 'utf8' });
+  races = JSON.parse(races);
+  for (let i = 0; i < races.length; i++) {
+    let item = races[i];
+    let index = {
+      id: utoi(item.url),
+      name: item.name,
+      category: "race",
+    }
+    dir.push(index);
+    let page = {
+      id: utoi(item.url),
+      name: item.name,
+      content: [],
+    };
+    page.content.push({id: "Title", content: item.name});
+    let statgrid = [];
+    statgrid.push({title: "Speed", content: item.speed+"ft"});
+    statgrid.push({title: "Size", content: item.size});
+    page.content.push({id: "StatGrid", content: statgrid});
+    page.content.push({id: "MultiText", content: ["***Age.***"+item.age, "***Alignment.***"+item.alignment, "***Languages.***"+item.language_desc, "***Size.***"+item.size_description]});
+
+    let statrows = [];
+    for (let i in item.starting_proficiency_choices) {
+      let choice = item.starting_proficiency_choices[i];
+      if (!choice.from.options[0].item) {
+        statrows.push({title: choice.desc, content: []});
+      } else {
+        let s = "Choose " + choice.choose + ":";
+        let arr = choice.from.options.map((i) => {
+          return "@"+proficiency_lookup.find((j) => j.index == i.item.index).next;
+        });
+        statrows.push({title: s, content: arr});
+      }
+    }
+    if (item.starting_proficiencies) {
+      statrows.push({title: "Proficiencies", content: item.starting_proficiencies.filter((i) => {
+        return !i.url.includes("saving-throw")
+      }).map((i) => {
+        return "@"+proficiency_lookup.find((j) => j.index == i.index).next;
+      })});
+    }
+    statrows.push({title: "Ability bonuses", content: item.ability_bonuses.map((i) => {
+      return "+"+i.bonus+" "+i.ability_score.name;
+    })});
+    statrows.push({title: "Languages", content: item.languages.map((i) => i.name)});
+    page.content.push({id: "StatList", content: statrows});
+
+    page.content.push({id: "Subtitle", content: "Traits"});
+    page.content.push({id: "LinkList", content: item.traits.map((i) => {
+      return {
+        id: "@"+utoi(i.url),
+        content: "",
+      };
+    })});
+    page.content.push({id: "Subtitle", content: "Subraces"});
+    page.content.push({id: "LinkList", content: item.subraces.map((i) => {
+      return {
+        id: "@"+utoi(i.url),
+        content: "",
+      };
+    })});
+
+    await fs.writeFile("./dst/data/"+utoi(item.url), obj_to_str(page));
+  }
+  let subraces = await fs.readFile('./src/5e-SRD-Subraces.json', { encoding: 'utf8' });
+  subraces = JSON.parse(subraces);
+  for (let i = 0; i < subraces.length; i++) {
+    let item = subraces[i];
+    let index = {
+      id: utoi(item.url),
+      name: item.name,
+      category: "subrace",
+    }
+    dir.push(index);
+    let page = {
+      id: utoi(item.url),
+      name: item.name,
+      content: [],
+    };
+    page.content.push({id: "Title", content: item.name});
+    let statgrid = [];
+    statgrid.push({title: "Race", content: "@"+utoi(item.race.url)});
+    page.content.push({id: "StatGrid", content: statgrid});
+    page.content.push({id: "MultiText", content: [item.desc]});
+
+    let statrows = [];
+    if (item.starting_proficiencies) {
+      statrows.push({title: "Proficiencies", content: item.starting_proficiencies.filter((i) => {
+        return !i.url.includes("saving-throw")
+      }).map((i) => {
+        return "@"+proficiency_lookup.find((j) => j.index == i.index).next;
+      })});
+    }
+    statrows.push({title: "Ability bonuses", content: item.ability_bonuses.map((i) => {
+      return "+"+i.bonus+" "+i.ability_score.name;
+    })});
+    if (item.languages) {
+      statrows.push({title: "Languages", content: item.languages.map((i) => i.name)});
+    }
+    page.content.push({id: "StatList", content: statrows});
+
+    if (item.traits) {
+      page.content.push({id: "Subtitle", content: "Traits"});
+      page.content.push({id: "LinkList", content: item.traits.map((i) => {
+        return {
+          id: "@"+utoi(i.url),
+          content: "",
+        };
+      })});
+    }
+    await fs.writeFile("./dst/data/"+utoi(item.url), obj_to_str(page));
+  }
+
+  let equipment_categories = await fs.readFile('./src/5e-SRD-Equipment-Categories.json', { encoding: 'utf8' });
+  equipment_categories = JSON.parse(equipment_categories);
+  for (let i = 0; i < equipment_categories.length; i++) {
+    let item = equipment_categories[i];
+    let index = {
+      id: utoi(item.url),
+      name: item.name,
+      category: "equipment category",
+    }
+    dir.push(index);
+    let page = {
+      id: utoi(item.url),
+      name: item.name,
+      content: [],
+    };
+    page.content.push({id: "Title", content: item.name});
+    page.content.push({id: "LinkList", content: item.equipment.map((i) => {
+      return {
+        id: "@"+utoi(i.url),
+        content: "",
+      };
+    })})
 
     await fs.writeFile("./dst/data/"+utoi(item.url), obj_to_str(page));
   }
