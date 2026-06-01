@@ -88,9 +88,10 @@ const score_to_modifier = (score) => {
       name: item.name,
       school: utoi(item.school.url),
       level: item.level,
-      class: item.classes.map((i) => utoi(i.url)),
+      class: item.classes.map((i) => i.index),
       category: "spell",
     };
+console.log(index.class);
     dir.push(index);
     let page = {
       id: utoi(item.url),
@@ -293,7 +294,7 @@ const score_to_modifier = (score) => {
         });
       } else {
         if (item.trait_scpecific.desc == undefined) {
-          console.log(item);
+          // console.log(item);
           return;
         }
         page.content.push({id: "MultiText", content: [item.trait_scpecific.desc]});
@@ -577,7 +578,7 @@ const score_to_modifier = (score) => {
 
     if (item.spellcasting) {
       page.content.push({id: "Subtitle", content: "Spellcasting"});
-      console.log(item.spellcasting.info);
+      // console.log(item.spellcasting.info);
       let arr = item.spellcasting.info.map((i) => {
         return "***" + i.name + ".***" + i.desc.join("\n");
       });
