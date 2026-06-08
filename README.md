@@ -25,6 +25,16 @@ string!"
 ```
 
 ## file structure
+```
+.source/:
+      .desc
+      .dir
+      .filter
+      .bookmarks
+      .data/
+            .acid-arrow
+            ...
+```
 each source consists of a few specially named files and a lot of data files.
 
 - ./bookmark: the content must be `[]`. the users bookmarks are stored here.
