@@ -25,6 +25,7 @@ string!"
 ```
 
 ## file structure
+each source consists of a few specially named files and a lot of data files.
 ```
 .source/:
       .desc
@@ -35,9 +36,8 @@ string!"
             .acid-arrow
             ...
 ```
-each source consists of a few specially named files and a lot of data files.
 
-- ./bookmark: the content must be `[]`. the users bookmarks are stored here.
+- ./bookmarks: the content must be `[]`. the users bookmarks are stored here.
 - ./desc: the content must be `{ name: "Dungeons and Dragons: Player's Handbook" }` with a name of your choosing.
 - 
 ### the filter file
