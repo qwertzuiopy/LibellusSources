@@ -1,6 +1,6 @@
 # Sources for Libellus
 
-for the programm itself, see https://github.com/qwertzuiopy/Libellus
+for the program itself, see https://github.com/qwertzuiopy/Libellus
 
 ## format
 all of the following files have to be written in a json-like syntax, but without the `"`s:
