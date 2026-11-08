@@ -173,7 +173,7 @@ console.log(index.class);
       content: [],
     };
     page.content.push({id: "Title", content: item.name});
-    page.content.push({id: "Image", url: "https://www.dnd5eapi.co"+item.image});
+    // page.content.push({id: "Image", url: "https://www.dnd5eapi.co"+item.image});
     let statgrid = [];
     statgrid.push({title: "Strength", content: item.strength.toString()+" / "+score_to_modifier(item.strength.toString())})
     statgrid.push({title: "Dexterity", content: item.dexterity.toString()+" / "+score_to_modifier(item.dexterity.toString())})
@@ -346,7 +346,7 @@ console.log(index.class);
     page.content.push({id: "Title", content: item.name});
 
     if (item.image) {
-      page.content.push({id: "Image", url: "https://www.dnd5eapi.co"+item.image});
+      // page.content.push({id: "Image", url: "https://www.dnd5eapi.co"+item.image});
     }
 
     let statgrid = [];
