@@ -27,6 +27,29 @@
       return res;
     }
   }
+  function process_text_array(descs) {
+    return { id: "TitledText", content: descs.map((i)=>{
+      let title = "";
+      if (i[0] == "*") {
+        title = i.slice(3, i.length);
+        title = title.slice(0, title.indexOf("***"));
+        if (title[title.length-1] == ".") {
+          title = title.slice(0, title.length-1);
+        }
+        i = i.slice(3, i.length);
+        i = i.slice(i.indexOf("***"), i.length);
+        while (i[0] == "*") {
+          i = i.slice(1, i.length);
+        }
+        i = i.trim();
+      }
+      return {
+        title: title,
+        content: i
+      };
+    })
+  };
+}
 
 
 const score_to_modifier = (score) => {
@@ -91,7 +114,6 @@ const score_to_modifier = (score) => {
       class: item.classes.map((i) => i.index),
       category: "spell",
     };
-console.log(index.class);
     dir.push(index);
     let page = {
       id: utoi(item.url),
@@ -120,10 +142,10 @@ console.log(index.class);
     }
     page.content.push({id: "StatGrid", content: statgrid});
     page.content.push({id: "Subtitle", content: "Effect"});
-    page.content.push({id: "MultiText", content: item.desc});
+    page.content.push(process_text_array(item.desc));
     if (item.higher_level && item.higher_level.length > 0) {
       page.content.push({id: "Subtitle", content: "At higher levels"});
-      page.content.push({id: "MultiText", content: item.higher_level});
+      page.content.push(process_text_array(item.higher_level));
     }
     if (item.damage && item.damage.damage_at_character_level) {
       page.content.push({
@@ -227,7 +249,7 @@ console.log(index.class);
     page.content.push({id: "StatList", content: statrows});
 
     if (item.desc) {
-      page.content.push({id: "MultiText", content: [item.desc.replaceAll("**", "")]});
+      page.content.push(process_text_array([item.desc.replaceAll("**", "")]));
     }
 
     if (item.special_abilities && item.special_abilities.length > 0) {
@@ -262,7 +284,7 @@ console.log(index.class);
       content: [],
     };
     page.content.push({id: "Title", content: item.name});
-    page.content.push({id: "MultiText", content: item.desc});
+    page.content.push(process_text_array(item.desc));
     let statrows = [];
     if (item.proficiency_choices) {
       let s = "Choose " + item.proficiency_choices.choose + ":";
@@ -299,7 +321,7 @@ console.log(index.class);
           // console.log(item);
           return;
         }
-        page.content.push({id: "MultiText", content: [item.trait_scpecific.desc]});
+        page.content.push(process_text_array([item.trait_scpecific.desc]));
       }
     }
     if (statrows.length > 0) {
@@ -420,7 +442,7 @@ console.log(index.class);
     }
 
     if (item.desc && item.desc.length > 0) {
-      page.content.push({id: "MultiText", content: item.desc});
+      page.content.push(process_text_array(item.desc));
     }
 
     if (item.contents && item.contents.length > 0) {
@@ -471,7 +493,7 @@ console.log(index.class);
     if (statgrid.length > 0) {
       page.content.push({id: "StatGrid", content: statgrid});
     }
-    page.content.push({id: "MultiText", content: item.desc});
+    page.content.push(process_text_array(item.desc));
 
     await fs.writeFile("./dst/data/"+utoi(item.url), obj_to_str(page));
   }
@@ -492,7 +514,7 @@ console.log(index.class);
       content: [],
     };
     page.content.push({id: "Title", content: item.full_name});
-    page.content.push({id: "MultiText", content: item.desc});
+    page.content.push(process_text_array(item.desc));
     page.content.push({id: "LinkList", content: item.skills.map((i) => {
       return {id: "@"+utoi(i.url), content: ""};
     })});
@@ -521,7 +543,7 @@ console.log(index.class);
     if (statgrid.length > 0) {
       page.content.push({id: "StatGrid", content: statgrid});
     }
-    page.content.push({id: "MultiText", content: item.desc});
+    page.content.push(process_text_array(item.desc));
     let arr = [{id: "@"+utoi(item.class.url), content: ""}];
     if (item.subclass) {
       arr.push({id: "@"+utoi(item.subclass.url), content: ""});
@@ -583,7 +605,7 @@ console.log(index.class);
       let arr = item.spellcasting.info.map((i) => {
         return "***" + i.name + ".***" + i.desc.join("\n");
       });
-      page.content.push({id: "MultiText", content: arr});
+      page.content.push(process_text_array(arr));
     }
 
     page.content.push({id: "Subtitle", content: "Starting Equipment"});
@@ -595,10 +617,7 @@ console.log(index.class);
         };
       })})
     }
-    page.content.push({
-      id: "MultiText",
-      content: item.starting_equipment_options.map((i) => i.desc)
-    });
+    page.content.push(process_text_array(item.starting_equipment_options.map((i) => i.desc)));
 
     page.content.push({id: "Subtitle", content: "Subclasses"});
     page.content.push({id: "LinkList", content: 
@@ -694,7 +713,7 @@ console.log(index.class);
       content: [],
     };
     page.content.push({id: "Title", content: item.name});
-    page.content.push({id: "MultiText", content: item.desc});
+    page.content.push(process_text_array(item.desc));
     
     let level_data = await get_sync(item.subclass_levels);
     level_data.sort((a, b) => { return a.level - b.level; });
@@ -747,7 +766,12 @@ console.log(index.class);
     statgrid.push({title: "Speed", content: item.speed+"ft"});
     statgrid.push({title: "Size", content: item.size});
     page.content.push({id: "StatGrid", content: statgrid});
-    page.content.push({id: "MultiText", content: ["***Age.***"+item.age, "***Alignment.***"+item.alignment, "***Languages.***"+item.language_desc, "***Size.***"+item.size_description]});
+    page.content.push({id: "TitledText", content: [
+      {title: "Age", content: item.age},
+      {title: "Alignment", content: item.alignment},
+      {title: "Languages", content: item.language_desc},
+      {title: "Size", content: item.size_description}
+    ]});
 
     let statrows = [];
     for (let i in item.starting_proficiency_choices) {
@@ -811,7 +835,7 @@ console.log(index.class);
     let statgrid = [];
     statgrid.push({title: "Race", content: "@"+utoi(item.race.url)});
     page.content.push({id: "StatGrid", content: statgrid});
-    page.content.push({id: "MultiText", content: [item.desc]});
+    page.content.push(process_text_array([item.desc]));
 
     let statrows = [];
     if (item.starting_proficiencies) {

@@ -7,7 +7,7 @@
     { id: "Subtitle", content: "..."},
     { id: "StatGrid", content: [{title: "title", content: "..."}]},
     { id: "LinkList", content: [{id: "@id1", content: "once"}, {id: "@id2", content: "twice"}]},
-    { id: "MultiText", content: ["text1", "text2"]},
+    { id: "Text", content: ["text1", "text2"]}, <--- potentially remove
     { id: "Table", content: [["one", "two"], ["three", "four"]]},
     { id: "StatList", content: [{title: "title", content: "..."}]},
     { id: "TitledText", content: [{ title:"title", content: "..." }]},
